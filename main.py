@@ -1,10 +1,10 @@
 
 def solicitar_idade():
- while True:
-  try:
+  while True:
+   try:
     idade = int(input('Digita a sua idade'))
     return idade
-  except ValueError:
+   except ValueError:
     print('insira um numero valido')
 
 def solicitar_rg():
@@ -15,52 +15,37 @@ def solicitar_rg():
   except ValueError:
     print('insira um numero valido')
 
-def cadastrar_pessoa(conn,cursor):
-   while True:
-    al=solicitar_rg()
-    cursor.execute("SELECT * FROM alunos WHERE RG = ?",(al,))
-    c=cursor.fetchone()
-    if c is None:
-      Dado_1=al
-      break
-    else:
-      print('rg ja cadastrado')
-  Dado_2=input('Qual seu nome? ')
-  Dado_3=solicitar_idade()
-  Dado_4=input('Qual seu genero ')
-  pessoa_atual = (Dado_1,Dado_2,Dado_3,Dado_4,False,True)
-  Registrar_Pessoa = ("INSERT INTO alunos (rg,name,age,gener,premium,adimp)VALUES(?, ? ,?, ?, ? ,?)")
-  cursor.execute(Registrar_Pessoa,pessoa_atual)
-  conn.commit()
+def cadastrar_pessoa(conn,cursor,rg,nome,idade,genero):
+       cursor.execute("SELECT * FROM alunos WHERE RG = ?",(rg,))
+       c=cursor.fetchone()
+       if c is None:
+        pessoa_atual = (rg,nome,idade,genero,False,True)
+        Registrar_Pessoa = ("INSERT INTO alunos (rg,name,age,gener,premium,adimp)VALUES(?, ? ,?, ?, ? ,?)")
+        cursor.execute(Registrar_Pessoa,pessoa_atual)
+        conn.commit()
+        return True
+       else:
+         return False
 
-def cadastrar_premium(conn,cursor):
-    while True:
-     al=solicitar_rg()
-     cursor.execute("SELECT * FROM alunos WHERE RG = ?",(al,))
+def cadastrar_premium(conn,cursor,rg,nome,idade,genero):
+     cursor.execute("SELECT * FROM alunos WHERE RG = ?",(rg,))
      c=cursor.fetchone()
      if c is None:
-       Dado_1=al
-       break
+      pessoa_atual = (rg,nome,idade,genero,True,True)
+      Registrar_Pessoa = ("INSERT INTO alunos (rg,name,age,gener,premium,adimp)VALUES(?, ? ,?, ?, ? ,?)")
+      cursor.execute(Registrar_Pessoa,pessoa_atual)
+      conn.commit()
+      return True
      else:
-       print('rg ja cadastrado')
-    Dado_2=input('Qual seu nome? ')
-    Dado_3=solicitar_idade()
-    Dado_4=input('Qual seu genero ')
-    pessoa_atual = (Dado_1,Dado_2,Dado_3,Dado_4,True,True)
-    Registrar_Pessoa = ("INSERT INTO alunos (rg,name,age,gener,premium,adimp)VALUES(?, ? ,?, ?, ? ,?)")
-    cursor.execute(Registrar_Pessoa,pessoa_atual)
-    conn.commit()
+       return False
 
-def consultar_ficha(cursor):
-   while True:
-    al=solicitar_rg()
-    cursor.execute("SELECT * FROM alunos WHERE RG = ?",(al,))
+def consultar_ficha(cursor,rg):
+    cursor.execute("SELECT * FROM alunos WHERE RG = ?",(rg,))
     c=cursor.fetchone()
     if c is None:
-     print('Rg nao cadastrado')
+     return False,None,None,None,None,None,None
     else:
-     Mostrar_dados(c[0],c[1],c[2],c[3],c[4],c[5])
-     break
+     return True,c[0],c[1],c[2],c[3],c[4],c[5]
 
 def Mostrar_dados(a,b,c,d,e,f):
     if f :
@@ -72,15 +57,22 @@ def Mostrar_dados(a,b,c,d,e,f):
     else:
      print(f'RG : {a}\nNome : {b}\nIdade : {c}\nGenero : {d}\nPremium : Não \n adimplente : {h}')
 
-def registrar_pagamento(conn,cursor):
-   al1,var,apt=validar_rg(cursor)
-   if apt:
-    print(f'o aluno : {al1} e premium e nao paga mensalidade')
-   else:
-    cursor.execute("UPDATE alunos SET adimp = 1 WHERE RG =?",(var,))
-    conn.commit()
-    print(f'pagamento do aluno : {al1} registrado com sucesso')
+def registrar_pagamento(conn, cursor, rg):
+    existe, nome, premium = validar_rg(cursor, rg)
 
+    if existe:
+        if premium:
+            return False, rg, nome, True
+        else:
+            cursor.execute(
+                "UPDATE alunos SET adimp = 1 WHERE RG = ?",
+                (rg,)
+            )
+            conn.commit()
+            return True, rg, nome, True
+    else:
+        return False, None, None, False
+    
 def listar_alunos(cursor):
     cursor.execute("SELECT * FROM alunos")
     e=cursor.fetchall()
@@ -89,16 +81,14 @@ def listar_alunos(cursor):
 
 
 
-def validar_rg(cursor):
- while True:
-  val=solicitar_rg()
-  cursor.execute("SELECT * FROM alunos WHERE RG = ?",(val,))
-  d=cursor.fetchone()
-  if d is None:
-    print('rg nao cadastrado na base de dados')
-  else:
-    return(d[1],d[0],d[4])
+def validar_rg(cursor, rg):
+    cursor.execute("SELECT * FROM alunos WHERE RG = ?", (rg,))
+    d = cursor.fetchone()
 
+    if d is None:
+        return False, None, None
+    else:
+        return True, d[1], d[4]
 
 def mostrar_menu():
     print('''
@@ -138,11 +128,7 @@ def Main():
  while(aberto):
   mostrar_menu()
   opcao=Solicitar_opcao()
-  if opcao == 1:
-   cadastrar_pessoa(conn,cursor)
-  elif opcao == 2:
-    consultar_ficha(cursor)
-  elif opcao == 3:
+  if opcao == 3:
     registrar_pagamento(conn,cursor)
   elif opcao == 4:
     listar_alunos(cursor)
@@ -153,5 +139,5 @@ def Main():
     aberto = False
   else:
     print('por favor, tente uma opção valida')
-
-Main()
+if __name__ == "__main__":
+    Main()
