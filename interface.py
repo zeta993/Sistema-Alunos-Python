@@ -1,5 +1,7 @@
 import customtkinter as ctk
 import main
+import graficos
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")
 class app(ctk.CTk):
@@ -33,11 +35,26 @@ class app(ctk.CTk):
         self.botao3=ctk.CTkButton(self.barra_lateral, text ='Alterar dados',command=self.cria_opc)
         self.botao3.pack(pady=(30,10), padx=(50,50))
 
+        self.botao5=ctk.CTkButton(self.barra_lateral, text ='Apagar cadastro',command=self.preview)
+        self.botao5.pack(pady=(30,10), padx=(50,50))
+
         self.botao4=ctk.CTkButton(self.barra_lateral, text ='Encerrar sistema',command=self.fechar)
         self.botao4.pack(pady=(30,10), padx=(50,50))
 
         self.assinatura=ctk.CTkLabel(self.barra_lateral, text='vinicius dias')
         self.assinatura.pack(pady=(300,0))
+    def preview(self):
+        self.limpar_principal()
+        self.titulo=ctk.CTkLabel(self.principal,text='DELETAR CADASTRO')
+        self.titulo.pack(pady=50) 
+        self.camporg=ctk.CTkEntry(self.principal,placeholder_text='Insira o RG')
+        self.camporg.pack(pady=200)
+        self.botao1=ctk.CTkButton(self.principal,text="Entrar",command=lambda:self.validar('deletar'))
+        self.botao1.pack(pady=10)
+
+
+
+
     def fechar(self):
        main.Fechar_banco(self.conn)
        self.destroy()
@@ -51,8 +68,6 @@ class app(ctk.CTk):
         self.botao2.pack(pady=(0,60))
         self.botao3=ctk.CTkButton(self.principal,text="Registrar Pagamento",command=self.pagamento)
         self.botao3.pack(pady=(0,60))
-        self.botao4=ctk.CTkButton(self.principal,text="Cadastrar Aluno Premium",command=self.premium)
-        self.botao4.pack(pady=(0,60))
 
     def cria_opc(self):
         self.limpar_principal()
@@ -60,30 +75,103 @@ class app(ctk.CTk):
         self.titulo.pack(pady=30)
         self.camporg=ctk.CTkEntry(self.principal,placeholder_text='Insira o RG')
         self.camporg.pack(pady=200)
-        self.botao1=ctk.CTkButton(self.principal,text="Entrar",command=self.validar)
+        self.botao1=ctk.CTkButton(self.principal,text="Entrar",command=lambda:self.validar('editar'))
         self.botao1.pack(pady=10)
 
-    def cria_term(self):
-        pass
+    def cria_term(self, rg, nome, idade, genero, premium, adimp):
+     self.limpar_principal()
+     self.titulo = ctk.CTkLabel(self.principal,text="Alterar dados",font=ctk.CTkFont(size=25, weight="bold"))
+     self.titulo.pack(pady=30)
+     self.rg = ctk.CTkLabel(self.principal,text=f"RG: {rg}")
+     self.rg.pack(pady=10)
+     self.linha_nome=ctk.CTkFrame(self.principal)
+     self.linha_nome.pack(pady=30)
+     self.campo_nome = ctk.CTkEntry(self.linha_nome,width=250)
+     self.campo_nome.insert(0, nome)
+     self.campo_nome.configure(state="disabled")
+     self.campo_nome.pack(side="left", padx=5)
+     self.botao_editar_nome = ctk.CTkButton(self.linha_nome,text="✎",width=40,command=lambda: self.desbloquear(self.campo_nome))
+     self.botao_editar_nome.pack(side="left", padx=5)
+
+     self.linha_idade=ctk.CTkFrame(self.principal)
+     self.linha_idade.pack(pady=30)
+     self.campo_idade = ctk.CTkEntry(self.linha_idade,width=250)
+     self.campo_idade.insert(0, idade)
+     self.campo_idade.configure(state="disabled")
+     self.campo_idade.pack(side="left", padx=5)
+     self.botao_editar_idade = ctk.CTkButton(self.linha_idade,text="✎",width=40,command=lambda: self.desbloquear(self.campo_idade))
+     self.botao_editar_idade.pack(side="left", padx=5)
+
+     self.linha_genero=ctk.CTkFrame(self.principal)
+     self.linha_genero.pack(pady=30)
+     self.campo_genero = ctk.CTkOptionMenu(self.linha_genero,values=["Masculino","Feminino","Prefiro não informar"],width=250)
+     self.campo_genero.set(genero)
+     self.campo_genero.configure(state="disabled")
+     self.campo_genero.pack(side="left", padx=5)
+     self.botao_editar_genero = ctk.CTkButton(self.linha_genero,text="✎",width=40,command=lambda: self.desbloquear(self.campo_genero))
+     self.botao_editar_genero.pack(side="left", padx=5)
+     
+     self.linha_premium=ctk.CTkFrame(self.principal)
+     self.linha_premium.pack(pady=30)
+     self.campo_premium = ctk.CTkSwitch(self.linha_premium,text="premium",width=250)
+     if premium:
+      self.campo_premium.select()
+     self.campo_premium.configure(state="disabled")
+     self.campo_premium.pack(side="left", padx=5)
+     self.botao_editar_premium = ctk.CTkButton(self.linha_premium,text="✎",width=40,command=lambda: self.desbloquear(self.campo_premium))
+     self.botao_editar_premium.pack(side="left", padx=5)
+     self.botao_salvar = ctk.CTkButton(self.principal,text="Salvar alterações",command=lambda:self.alterar_dados(rg,adimp))
+     self.botao_salvar.pack(pady=30)
+
+    def desbloquear(self,campo):
+      campo.configure(state="normal")
+      campo.focus()
 
     def cria_graf(self):
         self.limpar_principal()
-        self.titulo=ctk.CTkLabel(self.principal,text="Ainda em construçao", font=ctk.CTkFont(size=40,weight=("bold")))
-        self.titulo.pack(pady=300)
+        self.grafico_opçao = ctk.CTkOptionMenu(self.principal,values=["Todos os alunos","Numero de alunos por idade","Alunos por genero","Percentual de adimplencia"])
+        self.grafico_opçao.pack(pady=100)
+        self.botao1=ctk.CTkButton(self.principal,text="Salvar",command=self.gerar_graficos)
+        self.botao1.pack(pady=25)
+      
 
-    def validar(self):
+    def validar(self,açao):
       try :
         rg = int(self.camporg.get())
         val,d1,d2,d3,d4,d5,d6=main.consultar_ficha(self.cursor,rg)
         if val:
-         self.Mostrar_dados(d1,d2,d3,d4,d5,d6)
+         if açao=='consultar':
+          self.Mostrar_dados(d1,d2,d3,d4,d5,d6,açao)
+         elif açao=='deletar':
+           self.Mostrar_dados(d1,d2,d3,d4,d5,d6,açao)
+         else:
+           self.cria_term(d1,d2,d3,d4,d5,d6)
         else:
-         print("rg nao cadastrado na base de dados")
-         return
+         erro = ctk.CTkLabel(self.principal,text="RG não cadastrado na base de dados")
+         erro.pack(pady=10)
+        return
+      except ValueError:erro = ctk.CTkLabel(self.principal,text="RG inválido")
+      erro.pack(pady=10)
+      return
+
+    def alterar_dados(self,rg,adimp):
+      d2=self.campo_nome.get()
+      try:
+        d3 = int(self.campo_idade.get())
       except ValueError:
-               print('rg invalido')
-               return
-    def Mostrar_dados(self,d1,d2,d3,d4,d5,d6):
+        erro = ctk.CTkLabel(self.principal,text="Idade inválida")
+        erro.pack(pady=10)
+        return
+      d4=self.campo_genero.get()
+      d5=self.campo_premium.get()
+
+      confirm=main.alterar_dados(self.cursor,self.conn,d2,d3,d4,d5,adimp,rg)
+      if confirm:
+        confirmado=ctk.CTkLabel(self.principal,text='alterado com sucesso')
+        confirmado.pack(pady=15)
+
+
+    def Mostrar_dados(self,d1,d2,d3,d4,d5,d6,açao):
        self.limpar_principal()
        self.RG=ctk.CTkLabel(self.principal,text=f'RG: {d1}',font=ctk.CTkFont(size=20))
        self.RG.pack(pady=(100,10))
@@ -103,7 +191,51 @@ class app(ctk.CTk):
           else:
              self.adimplent=ctk.CTkLabel(self.principal,text="O aluno esta inadimplente")
              self.adimplent.pack(pady=20)
+       if açao == 'deletar':
+        self.botao_deletar=ctk.CTkButton(self.principal,text="Deletar cadastro", command=lambda:self.deletar(d1))
+        self.botao_deletar.pack(pady=30)
 
+    def deletar(self,rg):
+     pas = main.deletar(self.conn, self.cursor, rg)
+     if pas:
+        self.limpar_principal()
+        confirmado = ctk.CTkLabel(self.principal,text="Usuário deletado com sucesso")
+        confirmado.pack(pady=150)
+
+    def gerar_graficos(self):
+     d = self.grafico_opçao.get()
+     if d == "Todos os alunos":
+       df = graficos.Grafico_geral(self.cursor)
+       tabela = ctk.CTkFrame(self.principal)
+       tabela.pack(padx=20, pady=20)
+       for posicao, coluna in enumerate(df.columns):
+         titulo = ctk.CTkLabel(tabela, text=coluna)
+         titulo.grid(row=0, column=posicao, padx=10, pady=10)
+       for indice, aluno in df.iterrows():
+        for posicao, valor in enumerate(aluno):
+         coluna = df.columns[posicao]
+         if coluna == "Premium" or coluna == "Adimplente":
+          if valor == 1:
+           valor = "Sim"
+          else:
+           valor = "Não"
+         dado = ctk.CTkLabel(tabela, text=valor)
+         dado.grid(row=indice + 1,column=posicao,padx=10,pady=5)
+     elif d=="Numero de alunos por idade":
+      fig=graficos.Grafico_de_idades(self.cursor)
+      canvas=FigureCanvasTkAgg(fig, master=self.principal)
+      canvas.get_tk_widget().pack(fill='both',pady=30,padx=30,expand=True)
+     elif d =="Alunos por genero":
+          fig=graficos.Grafico_de_generos(self.cursor)
+          canvas = FigureCanvasTkAgg(fig, master=self.principal)
+          canvas.get_tk_widget().pack(fill='both',pady=30,padx=30,expand=True)
+
+     elif d =="Percentual de adimplencia":
+          fig=graficos.Grafico_de_adimplencia(self.cursor)
+          canvas = FigureCanvasTkAgg(fig, master=self.principal)
+          canvas.get_tk_widget().pack(fill='both',pady=30,padx=30,expand=True)
+       
+    
     def cadastrar(self):
        self.limpar_principal()
        self.titulo=ctk.CTkLabel(self.principal,text='Cadastro de novo aluno')
@@ -114,40 +246,29 @@ class app(ctk.CTk):
        self.campo2.pack(pady=15)
        self.campo3=ctk.CTkEntry(self.principal,placeholder_text='Idade')
        self.campo3.pack(pady=15)
-       self.campo4=ctk.CTkEntry(self.principal,placeholder_text='Genero')
-       self.campo4.pack(pady=15)
-       self.botao1=ctk.CTkButton(self.principal,text="Salvar",command=lambda:self.confirmaçao(False))
+       self.genero_opçao = ctk.CTkOptionMenu(self.principal,values=["Masculino", "Feminino", "Prefiro não informar"])
+       self.genero_opçao.pack(pady=15)
+       self.switc=ctk.CTkSwitch(self.principal,text="Aluno premium")
+       self.switc.pack(pady=(0,10))
+       self.botao1=ctk.CTkButton(self.principal,text="Salvar",command=self.confirmaçao)
        self.botao1.pack(pady=25)
 
-    def premium(self):
-       self.limpar_principal()
-       self.titulo=ctk.CTkLabel(self.principal,text='Cadastro de novo aluno')
-       self.titulo.pack(pady=50)
-       self.campo1=ctk.CTkEntry(self.principal,placeholder_text='RG')
-       self.campo1.pack(pady=15)
-       self.campo2=ctk.CTkEntry(self.principal,placeholder_text='Nome')
-       self.campo2.pack(pady=15)
-       self.campo3=ctk.CTkEntry(self.principal,placeholder_text='Idade')
-       self.campo3.pack(pady=15)
-       self.campo4=ctk.CTkEntry(self.principal,placeholder_text='Genero')
-       self.campo4.pack(pady=15)
-       self.botao1=ctk.CTkButton(self.principal,text="Salvar",command=lambda:self.confirmaçao(True))
-       self.botao1.pack(pady=25)
-
-    def confirmaçao(self,premium):
+    def confirmaçao(self):
       try :
        rg = int(self.campo1.get())
       except ValueError:
-        print('rg invalido')
-        return
+       erro = ctk.CTkLabel(self.principal, text="RG inválido")
+       erro.pack(pady=10)
+       return
       nome = self.campo2.get()
       try:
         idade = int(self.campo3.get())
       except ValueError:
-        print('idade invalida')
-        return
-      genero = self.campo4.get()
-      if premium:
+       erro = ctk.CTkLabel(self.principal, text="Idade inválida")
+       erro.pack(pady=10)
+       return
+      genero = self.genero_opçao.get()
+      if self.switc.get():
          valida=main.cadastrar_premium(self.conn,self.cursor,rg,nome,idade,genero)
       else:
          valida=main.cadastrar_pessoa(self.conn,self.cursor,rg,nome,idade,genero)   
@@ -166,7 +287,7 @@ class app(ctk.CTk):
         self.titulo.pack(pady=50) 
         self.camporg=ctk.CTkEntry(self.principal,placeholder_text='Insira o RG')
         self.camporg.pack(pady=200)
-        self.botao1=ctk.CTkButton(self.principal,text="Entrar",command=self.validar)
+        self.botao1=ctk.CTkButton(self.principal,text="Entrar",command=lambda:self.validar('consultar'))
         self.botao1.pack(pady=10)
        
     def pagamento(self):
@@ -182,7 +303,8 @@ class app(ctk.CTk):
      try:
       rg = int(self.camporg.get())
      except ValueError:
-      print("RG inválido")
+      erro = ctk.CTkLabel(self.principal, text="RG inválido")
+      erro.pack(pady=10)
       return
      val,rg,nome,existe=main.registrar_pagamento(self.conn,self.cursor,rg)
      self.limpar_principal()
